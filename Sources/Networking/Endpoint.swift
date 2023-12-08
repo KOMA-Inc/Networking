@@ -8,7 +8,7 @@ public protocol Endpoint {
 
     var method: HTTPMethod { get }
 
-    var body: Data? { get }
+    var body: Encodable? { get }
 
     var parameters: [String: Any]? { get }
 }

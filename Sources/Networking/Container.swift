@@ -44,7 +44,7 @@ struct Container<DataType: Decodable>: Decodable {
 
     init(error: Error) {
         self.data = nil
-        self.error = .init(error: error)
+        self.error = .init(from: error)
     }
 }
 

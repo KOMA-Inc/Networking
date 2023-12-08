@@ -4,13 +4,14 @@ import Foundation
 public protocol NetworkingService {
     associatedtype Endpoint: Networking.Endpoint
 
-    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, Error>
+    func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, APIError>
 }
 
-public class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
+open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     // MARK: - Private properties
 
+    private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
     // MARK: - Public interface
@@ -19,7 +20,7 @@ public class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     public func request<T: Decodable>(
         _ endpoint: Endpoint
-    ) -> AnyPublisher<T, Error> {
+    ) -> AnyPublisher<T, APIError> {
         do {
             let request = try request(for: endpoint)
             logRequest(request, for: endpoint)
@@ -31,25 +32,27 @@ public class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
                 .perform { [weak self] data, response in
                     self?.logResponse(response, for: endpoint, with: data)
                 }
-                .map { data, _ -> Data in
-                    data
-                }
-                .decode(type: Container<T>.self, decoder: decoder(for: endpoint))
-                .tryMap { container in
-                    if let error = container.error {
+                .tryMap { [weak self] data, response -> T in
+                    guard let self else { throw APIError.noData }
+                    do {
+                        let container = try decoder(for: endpoint).decode(Container<T>.self, from: data)
+                        if let error = container.error {
+                            throw error
+                        } else if let data = container.data {
+                            return data
+                        } else {
+                            throw APIError.noData
+                        }
+                    } catch {
+                        logError(error, for: endpoint, with: response, with: data)
                         throw error
-                    } else if let data = container.data {
-                        return data
-                    } else {
-                        throw APIError.noData
                     }
                 }
-                .onError { [weak self] error in
-                    self?.logError(error, for: endpoint)
-                }
+                .mapToErrorType(APIError.self)
                 .eraseToAnyPublisher()
         } catch {
             return Fail(error: error)
+                .mapToErrorType(APIError.self)
                 .eraseToAnyPublisher()
         }
     }
@@ -63,10 +66,16 @@ public class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
         var request = URLRequest(url: url)
         request.allHTTPHeaderFields = headers(for: endpoint)
-        request.httpBody = endpoint.body
+        request.httpBody = endpoint.body.flatMap {
+            try? encoder(for: endpoint).encode($0)
+        }
         request.httpMethod = endpoint.method.rawValue
 
         return request
+    }
+
+    open func encoder(for endpoint: Endpoint) -> JSONEncoder {
+        encoder
     }
 
     open func decoder(for endpoint: Endpoint) -> JSONDecoder {
@@ -102,7 +111,9 @@ public class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     open func logError(
         _ error: Swift.Error,
-        for endpoint: Endpoint
+        for endpoint: Endpoint,
+        with response: URLResponse,
+        with data: Data
     ) {
 
     }

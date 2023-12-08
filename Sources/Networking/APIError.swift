@@ -1,6 +1,7 @@
+import CombinePlus
 import Foundation
 
-public enum APIError: LocalizedError {
+public enum APIError: LocalizedError, SystemConvertableError {
 
     case invalidResponse
     case invalidBaseURL(String)
@@ -28,7 +29,7 @@ public enum APIError: LocalizedError {
         }
     }
 
-    init(error: Error) {
+    public init(from error: Error) {
         self = if let error = error as? APIError {
             error
         } else {
