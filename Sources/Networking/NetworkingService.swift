@@ -30,7 +30,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
                     self?.track(endpoint: endpoint, data: data, response: response)
                 }
                 .perform { [weak self] data, response in
-                    self?.logResponse(response, for: endpoint, with: data)
+                    self?.logResponse(response, for: request, for: endpoint, with: data)
                 }
                 .tryMap { [weak self] data, response -> T in
                     guard let self else { throw APIError.noData }
@@ -44,7 +44,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
                             throw APIError.noData
                         }
                     } catch {
-                        logError(error, for: endpoint, with: response, with: data)
+                        logError(error, for: request, for: endpoint, with: response, with: data)
                         throw error
                     }
                 }
@@ -103,6 +103,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     open func logResponse(
         _ response: URLResponse,
+        for request: URLRequest,
         for endpoint: Endpoint,
         with data: Data
     ) {
@@ -111,6 +112,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     open func logError(
         _ error: Swift.Error,
+        for request: URLRequest,
         for endpoint: Endpoint,
         with response: URLResponse,
         with data: Data
