@@ -29,17 +29,15 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
                 .track { [weak self] data, response in
                     self?.track(endpoint: endpoint, data: data, response: response)
                 }
-                .perform { [weak self] data, response in
-                    self?.logResponse(response, for: request, for: endpoint, with: data)
-                }
                 .tryMap { [weak self] data, response -> T in
                     guard let self else { throw APIError.noData }
                     do {
                         let container = try decoder(for: endpoint).decode(Container<T>.self, from: data)
                         if let error = container.error {
                             throw error
-                        } else if let data = container.data {
-                            return data
+                        } else if let decodedData = container.data {
+                            logResponse(response, for: request, for: endpoint, with: data)
+                            return decodedData
                         } else {
                             throw APIError.noData
                         }
