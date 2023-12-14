@@ -14,9 +14,15 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
+    private let mocker: Mocker?
+
     // MARK: - Public interface
 
-    public init() { }
+    public init(
+        mocker: Mocker? = nil
+    ) {
+        self.mocker = mocker
+    }
 
     public func request<T: Decodable>(
         _ endpoint: Endpoint
@@ -24,7 +30,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         do {
             let request = try request(for: endpoint)
             logRequest(request, for: endpoint)
-            return URLSession.shared.dataTaskPublisher(for: request)
+            return dataTaskPublisher(for: request)
                 .subscribe(on: DispatchQueue.global(qos: .background))
                 .track { [weak self] data, response in
                     self?.track(endpoint: endpoint, data: data, response: response)
@@ -51,6 +57,24 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         } catch {
             return Fail(error: error)
                 .mapToErrorType(APIError.self)
+                .eraseToAnyPublisher()
+        }
+    }
+
+    private func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(Data, AnyHTTPURLResponse), URLError> {
+        if let mocker {
+            return mocker.dataTaskPublisher(for: request)
+        } else {
+            return URLSession.shared.dataTaskPublisher(for: request)
+                .tryMap { data, response in
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw URLError(URLError.Code(rawValue: 1301))
+                    }
+                    return (data, httpResponse)
+                }
+                .mapError { error in
+                    error as! URLError
+                }
                 .eraseToAnyPublisher()
         }
     }
@@ -87,7 +111,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
     open func track(
         endpoint: Endpoint,
         data: Data,
-        response: URLResponse
+        response: AnyHTTPURLResponse
     ) {
 
     }
@@ -100,7 +124,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
     }
 
     open func logResponse(
-        _ response: URLResponse,
+        _ response: AnyHTTPURLResponse,
         for request: URLRequest,
         for endpoint: Endpoint,
         with data: Data
@@ -112,7 +136,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         _ error: Swift.Error,
         for request: URLRequest,
         for endpoint: Endpoint,
-        with response: URLResponse,
+        with response: AnyHTTPURLResponse,
         with data: Data
     ) {
 
