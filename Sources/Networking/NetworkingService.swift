@@ -88,8 +88,12 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
         var request = URLRequest(url: url)
         request.allHTTPHeaderFields = headers(for: endpoint)
-        request.httpBody = endpoint.body.flatMap {
-            try? encoder(for: endpoint).encode($0)
+        request.httpBody = endpoint.body.flatMap { body in
+            if let body = body as? Data {
+                body
+            } else {
+                try? encoder(for: endpoint).encode(body)
+            }
         }
         request.httpMethod = endpoint.method.rawValue
 
