@@ -10,12 +10,12 @@ public protocol Endpoint {
 
     var body: Encodable? { get }
 
-    var parameters: [String: Any]? { get }
+    var queryItems: [URLQueryItem]? { get }
 }
 
 public extension Endpoint {
 
-    var parameters: [String: Any]? {
+    var queryItems: [URLQueryItem]? {
         nil
     }
 }

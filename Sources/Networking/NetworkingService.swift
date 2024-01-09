@@ -82,7 +82,13 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
     private func request(for endpoint: Endpoint) throws -> URLRequest {
         guard
             let path = endpoint.path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-            let url = URL(string: endpoint.host + path) else {
+            var components = URLComponents(string: endpoint.host + path) else {
+            throw APIError.invalidBaseURL(endpoint.host + endpoint.path)
+        }
+
+        components.queryItems = endpoint.queryItems
+
+        guard let url = components.url else {
             throw APIError.invalidBaseURL(endpoint.host + endpoint.path)
         }
 
