@@ -9,6 +9,7 @@ public enum APIError: LocalizedError, SystemConvertableError {
     case system(Error)
     case some(code: Int, error: ContainerError)
     case multiple(code: Int, errors: [ContainerMultipleError])
+    case forbiddenAction
 
     public var errorDescription: String? {
         switch self {
@@ -26,6 +27,8 @@ public enum APIError: LocalizedError, SystemConvertableError {
             code.description + "\n\n" + errors.map { error in
                 error.name + "\n" + error.messages.joined(separator: "; ")
             }.joined(separator: "\n\n")
+        case .forbiddenAction:
+            "Forbidden action"
         }
     }
 
