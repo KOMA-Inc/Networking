@@ -28,12 +28,13 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         _ endpoint: Endpoint
     ) -> AnyPublisher<T, APIError> {
         do {
+            let id = UUID()
             let request = try request(for: endpoint)
-            logRequest(request, for: endpoint)
+            logRequest(request, for: endpoint, with: id)
             return dataTaskPublisher(for: request)
                 .subscribe(on: DispatchQueue.global(qos: .background))
                 .track { [weak self] data, response in
-                    self?.track(endpoint: endpoint, data: data, response: response)
+                    self?.track(endpoint: endpoint, with: id, data: data, response: response)
                 }
                 .tryMap { [weak self] data, response -> T in
                     guard let self else { throw APIError.noData }
@@ -42,13 +43,13 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
                         if let error = container.error {
                             throw error
                         } else if let decodedData = container.data {
-                            logResponse(response, for: request, for: endpoint, with: data)
+                            logResponse(response, for: request, for: endpoint, with: id, with: data)
                             return decodedData
                         } else {
                             throw APIError.noData
                         }
                     } catch {
-                        logError(error, for: request, for: endpoint, with: response, with: data)
+                        logError(error, for: request, for: endpoint, with: id, with: response, with: data)
                         throw error
                     }
                 }
@@ -120,6 +121,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     open func track(
         endpoint: Endpoint,
+        with id: UUID,
         data: Data,
         response: AnyHTTPURLResponse
     ) {
@@ -128,7 +130,8 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
 
     open func logRequest(
         _ request: URLRequest,
-        for endpoint: Endpoint
+        for endpoint: Endpoint,
+        with id: UUID
     ) {
 
     }
@@ -137,6 +140,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         _ response: AnyHTTPURLResponse,
         for request: URLRequest,
         for endpoint: Endpoint,
+        with id: UUID,
         with data: Data
     ) {
 
@@ -146,6 +150,7 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NetworkingService {
         _ error: Swift.Error,
         for request: URLRequest,
         for endpoint: Endpoint,
+        with id: UUID,
         with response: AnyHTTPURLResponse,
         with data: Data
     ) {
