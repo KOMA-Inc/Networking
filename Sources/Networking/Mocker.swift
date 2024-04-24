@@ -44,8 +44,9 @@ extension HTTPURLResponse: AnyHTTPURLResponse {
     }
 }
 
-public protocol Mocker {
+public protocol Mocker: AnyObject {
 
+    func setURLSession(_ urlSession: URLSession)
     func dataTaskPublisher(for request: URLRequest) -> AnyPublisher<(Data, AnyHTTPURLResponse), URLError>
 }
 
