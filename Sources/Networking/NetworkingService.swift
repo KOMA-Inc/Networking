@@ -169,21 +169,24 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NSObject, NetworkingSe
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
-        if let trust = challenge.protectionSpace.serverTrust,
-           SecTrustGetCertificateCount(trust) > 0,
-           let certificates {
+        guard let certificates else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
 
+        if let trust = challenge.protectionSpace.serverTrust, SecTrustGetCertificateCount(trust) > 0 {
             if let certificate = SecTrustGetCertificateAtIndex(trust, 0) {
                 let data = SecCertificateCopyData(certificate) as Data
-
                 if certificates.contains(data) {
                     completionHandler(.useCredential, URLCredential(trust: trust))
-                } else {
-                    completionHandler(.cancelAuthenticationChallenge, nil)
+                    return
                 }
             }
-        } else {
-            completionHandler(.performDefaultHandling, nil)
         }
+
+        #if DEBUG
+        print("🥷 MITH for \(challenge.protectionSpace.host)")
+        #endif
+        completionHandler(.cancelAuthenticationChallenge, nil)
     }
 }
