@@ -7,26 +7,21 @@ public protocol NetworkingService {
     func request<T: Decodable>(_ endpoint: Endpoint) -> AnyPublisher<T, APIError>
 }
 
-open class NetworkService<Endpoint: Networking.Endpoint>: NSObject, NetworkingService, URLSessionDelegate {
+open class NetworkService<Endpoint: Networking.Endpoint>: NSObject, NetworkingService {
 
     // MARK: - Private properties
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    private lazy var session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+    private lazy var session = URLSession.shared
 
     private let mocker: Mocker?
-    private let certificates: [Data]?
 
     // MARK: - Public interface
 
-    public init(
-        mocker: Mocker? = nil,
-        certificates: [Data]? = nil
-    ) {
+    public init(mocker: Mocker? = nil) {
         self.mocker = mocker
-        self.certificates = certificates
         super.init()
         self.mocker?.setURLSession(session)
     }
@@ -162,31 +157,5 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NSObject, NetworkingSe
         with data: Data
     ) {
 
-    }
-
-    public func urlSession(
-        _ session: URLSession,
-        didReceive challenge: URLAuthenticationChallenge,
-        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
-    ) {
-        guard let certificates else {
-            completionHandler(.performDefaultHandling, nil)
-            return
-        }
-
-        if let trust = challenge.protectionSpace.serverTrust, SecTrustGetCertificateCount(trust) > 0 {
-            if let certificate = SecTrustGetCertificateAtIndex(trust, 0) {
-                let data = SecCertificateCopyData(certificate) as Data
-                if certificates.contains(data) {
-                    completionHandler(.useCredential, URLCredential(trust: trust))
-                    return
-                }
-            }
-        }
-
-        #if DEBUG
-        print("🥷 MITH for \(challenge.protectionSpace.host)")
-        #endif
-        completionHandler(.cancelAuthenticationChallenge, nil)
     }
 }
