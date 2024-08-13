@@ -17,7 +17,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/KOMA-Inc/CombinePlus",
-            branch: "main"
+            from: "1.1.0"
         )
     ],
     targets: [
