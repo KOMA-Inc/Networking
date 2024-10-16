@@ -26,6 +26,28 @@ open class NetworkService<Endpoint: Networking.Endpoint>: NSObject, NetworkingSe
         self.mocker?.setURLSession(session)
     }
 
+    public func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
+        let id = UUID()
+        let request = try request(for: endpoint)
+        logRequest(request, for: endpoint, with: id)
+        let (data, response) = try await dataTaskPublisher(for: request).async()
+        track(endpoint: endpoint, with: id, data: data, response: response)
+        do {
+            let container = try decoder(for: endpoint).decode(Container<T>.self, from: data)
+            if let error = container.error {
+                throw error
+            } else if let decodedData = container.data {
+                logResponse(response, for: request, for: endpoint, with: id, with: data)
+                return decodedData
+            } else {
+                throw APIError.noData
+            }
+        } catch {
+            logError(error, for: request, for: endpoint, with: id, with: response, with: data)
+            throw error
+        }
+    }
+
     public func request<T: Decodable>(
         _ endpoint: Endpoint
     ) -> AnyPublisher<T, APIError> {
