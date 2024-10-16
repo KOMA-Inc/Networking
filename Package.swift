@@ -14,16 +14,9 @@ let package = Package(
             targets: ["Networking"]
         )
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/KOMA-Inc/CombinePlus",
-            from: "1.1.0"
-        )
-    ],
     targets: [
         .target(
-            name: "Networking",
-            dependencies: ["CombinePlus"]
+            name: "Networking"
         ),
         .testTarget(
             name: "NetworkingTests",

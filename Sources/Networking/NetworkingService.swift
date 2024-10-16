@@ -1,4 +1,4 @@
-import CombinePlus
+import Combine
 import Foundation
 
 public protocol NetworkingService {
